@@ -40,12 +40,21 @@ npm run dist
 
 Outputs are written to `dist/`: a Windows installer and a portable executable. A GitHub Actions workflow at `.github/workflows/build-windows.yml` builds both on pushes to `main` or `master`, and on manual runs. When the workflow finishes, open the run under the repository's **Actions** tab and download the `3008-minimap-windows` artifact. GitHub Actions artifacts are temporary build downloads, not a permanent release.
 
-## Connect a live backend
+## Deploy the backend on Render
 
-1. Deploy `server.js` to a host that supports a persistent Node.js process and HTTPS. GitHub Pages cannot run Node servers. Set a strong `MINIMAP_TOKEN` environment variable on the backend.
-2. In the Roblox experience you own or are authorized to administer, put `roblox/MinimapReporter.server.lua` in `ServerScriptService`.
-3. Set `REPORT_URL` in the Lua script to `https://YOUR-BACKEND-HOST/api/report`, and set its server-only `TOKEN` to the same secret. Enable HTTP requests in Roblox Studio and set coordinate bounds to match your own map.
-4. Open 3008 Minimap and enter the backend's base URL (for example, `https://YOUR-BACKEND-HOST`) in **Backend API URL**, then click **Save connection**. The app polls `/api/players` every five seconds.
+A Render Blueprint is included in `render.yaml`. To create the hosted service (this requires your Render account; committing this file does not deploy it automatically):
+
+1. Open [Render](https://render.com/) and sign in, then choose **New → Blueprint** and connect this GitHub repository.
+2. Select `gggevego15-ui/3008Minimap` and deploy the Blueprint from `render.yaml`. Render will create a Node web service and generate `MINIMAP_TOKEN`.
+3. When deployment finishes, open the service's **Settings / Environment** and copy the generated `MINIMAP_TOKEN` privately. Never commit this secret to GitHub or put it in browser-side code.
+4. Test `https://YOUR-RENDER-SERVICE.onrender.com/api/health`. It should return JSON with `ok: true`. The `connected` field remains false until a fresh Roblox report arrives. Free services may sleep after inactivity, so the first request can take a little time.
+5. In the Roblox experience you own or are authorized to administer, put `roblox/MinimapReporter.server.lua` in `ServerScriptService`.
+6. Set `REPORT_URL` in the script to `https://YOUR-RENDER-SERVICE.onrender.com/api/report`. Replace the Lua `TOKEN` placeholder with the same generated secret. Keep this in a server-only Script; do not put it in a LocalScript or public client code. Enable HTTP requests in Roblox Studio and calibrate the coordinate bounds for your own map.
+7. Open 3008 Minimap and enter the base URL `https://YOUR-RENDER-SERVICE.onrender.com` in **Backend API URL**, then click **Save connection**. The app polls `/api/players` every five seconds.
+
+## Connect a live backend manually
+
+For another Node.js host, deploy `server.js` as a persistent Node process with HTTPS and set a strong `MINIMAP_TOKEN` environment variable. GitHub Pages cannot run Node servers. Then follow steps 5–7 above using that host's URL.
 
 The map shows live positions only after the backend receives a valid recent report. Otherwise it stays in demo mode. The sample coordinate bounds are examples and are not verified for the official 3008 game.
 
