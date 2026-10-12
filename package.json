@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "desktop": "electron .",
-    "dist": "electron-builder --win nsis portable"
+    "dist": "electron-builder --win"
   },
   "engines": {
     "node": ">=20"
@@ -35,11 +35,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
