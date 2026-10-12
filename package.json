@@ -1,12 +1,53 @@
 {
   "name": "3008-minimap",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "Interactive Roblox 3008 minimap and optional live position relay",
+  "description": "Interactive Roblox 3008 minimap desktop app and optional live position relay",
+  "main": "electron/main.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "desktop": "electron .",
+    "dist": "electron-builder --win nsis portable"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.community.3008minimap",
+    "productName": "3008 Minimap",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "server.js",
+      "electron/**/*",
+      "package.json",
+      "README.md",
+      "roblox/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }
