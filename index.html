@@ -52,7 +52,7 @@ const defaultMarkers=[
  {id:'m2',name:'Food supplies',type:'supply',x:71,y:38},
  {id:'m3',name:'Employee patrol',type:'danger',x:57,y:79}
 ];
-let players=demoPlayers.map(p=>({...p})),zoom=1,offsetX=0,offsetY=0,clickMode=false,focused=null;
+let players=demoPlayers.map(p=>({...p})),zoom=1,offsetX=0,offsetY=0,clickMode=false,focused=null,liveMode=false;
 let markers=loadMarkers();
 function loadMarkers(){try{const v=JSON.parse(localStorage.getItem('3008-minimap-markers'));return Array.isArray(v)?v:defaultMarkers.map(m=>({...m}));}catch(e){return defaultMarkers.map(m=>({...m}));}}
 function saveMarkers(){try{localStorage.setItem('3008-minimap-markers',JSON.stringify(markers));}catch(e){}}
@@ -108,7 +108,20 @@ $('map').addEventListener('click',e=>{if(!clickMode)return;const r=e.currentTarg
 $('resetBtn').addEventListener('click',()=>{if(!confirm('Reset zoom and restore default demo markers? Your custom markers will be removed.'))return;markers=defaultMarkers.map(m=>({...m}));zoom=1;offsetX=0;offsetY=0;focused=null;saveMarkers();renderMarkers();draw();toast('Map reset');});
 $('exportBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),markers},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='3008-minimap-markers.json';a.click();URL.revokeObjectURL(a.href);toast('Markers exported');});
 window.addEventListener('resize',draw);
-renderPlayers();renderMarkers();draw();
+async function refreshLivePlayers(){
+ try {
+  const response=await fetch('/api/players',{cache:'no-store'});
+  if(!response.ok) throw new Error('API unavailable');
+  const data=await response.json();
+  if(data.connected && Array.isArray(data.players)){
+   players=data.players.map((p,i)=>({...p,id:String(p.id||i),name:String(p.name||'Player'),x:clamp(Number(p.x)||0,0,100),y:clamp(Number(p.y)||0,0,100),color:p.color||'#8bc8ff',self:false}));
+   liveMode=true;$('liveLabel').textContent='LIVE · ROBLOX SERVER';$('playerCount').nextElementSibling.textContent='Live server positions';renderPlayers();draw();
+  } else if(liveMode) {
+   players=demoPlayers.map(p=>({...p}));liveMode=false;$('liveLabel').textContent='LOCAL DEMO MODE';$('playerCount').nextElementSibling.textContent='Demo positions';renderPlayers();draw();
+  }
+ } catch(e) { /* GitHub Pages/static mode has no API; keep the demo working. */ }
+}
+renderPlayers();renderMarkers();draw();refreshLivePlayers();setInterval(refreshLivePlayers,5000);
 })();
 </script>
 </body></html>
