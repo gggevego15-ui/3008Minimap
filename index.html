@@ -31,7 +31,7 @@
   <section class="panel"><div class="panelhead"><div><h2>Player radar</h2><div class="sub">Select a player to focus the map</div></div><span class="status">'+(liveMode?'LIVE':'DEMO')+'</span></div><div class="searchbox"><input class="search" id="playerSearch" placeholder="⌕  Search username..." autocomplete="off"></div><div class="list" id="playerList"></div><div class="hint">Real Roblox players will appear here after a Roblox server integration is configured. Demo names are fictional.</div></section>
   <section class="panel"><div class="panelhead"><div><h2>Quick marker</h2><div class="sub">Create a point of interest</div></div><span style="color:var(--lime)">＋</span></div><div class="sectionpad"><label class="fieldlabel" for="markerName">Marker name</label><input class="field" id="markerName" maxlength="36" placeholder="e.g. Main base"><div class="fieldrow"><div><label class="fieldlabel" for="markerType">Type</label><select class="field" id="markerType"><option value="base">🏠 Base</option><option value="supply">📦 Supplies</option><option value="danger">⚠️ Danger</option><option value="friend">🟢 Friend</option><option value="custom">📍 Custom</option></select></div><div><label class="fieldlabel" for="markerX">Map X</label><input class="field" id="markerX" type="number" min="0" max="100" value="50"></div></div><div class="fieldrow"><div><label class="fieldlabel" for="markerY">Map Y</label><input class="field" id="markerY" type="number" min="0" max="100" value="50"></div><div style="display:flex;align-items:end"><button class="button primary" id="addMarker" style="width:100%">＋ Add point</button></div></div><button class="button full" id="clickMode">⌖ Place by clicking map: OFF</button></div></section>
   <section class="panel"><div class="panelhead"><div><h2>Saved locations</h2><div class="sub">Stored on this device</div></div><span id="savedBadge" class="sub">LOCAL</span></div><div class="markerlist" id="markerList"></div></section>
-  <section class="panel"><div class="panelhead"><div><h2>Connection status</h2><div class="sub">Roblox integration</div></div></div><div class="sectionpad"><div class="connection"><span style="color:var(--orange)">●</span><div><b>Not connected to Roblox</b><br>Map and markers work in demo mode. Live player positions need a trusted backend and a Roblox server script.</div></div></div></section>
+  <section class="panel"><div class="panelhead"><div><h2>Connection status</h2><div class="sub">Roblox integration</div></div></div><div class="sectionpad"><div class="connection"><span style="color:var(--orange)">●</span><div><b id="connectionTitle">Demo mode</b><br><span id="connectionText">Add the HTTPS URL of your deployed backend to receive live positions.</span></div></div><label class="fieldlabel" for="backendUrl" style="margin-top:12px">Backend API URL</label><input class="field" id="backendUrl" placeholder="https://your-server.example" inputmode="url" autocomplete="url"><button class="button primary full" id="saveBackend">Save connection</button><div class="hint" style="padding:10px 0 0">Use a backend you control. The URL must expose <strong>/api/players</strong> and allow browser reads via CORS. Never enter a secret token here.</div></div></section>
  </aside>
 </div>
 <div class="footer"><span>3008 MINIMAP · COMMUNITY SURVIVAL TOOL</span><span>Prototype UI · No game account credentials requested</span></div>
@@ -53,6 +53,8 @@ const defaultMarkers=[
  {id:'m3',name:'Employee patrol',type:'danger',x:57,y:79}
 ];
 let players=demoPlayers.map(p=>({...p})),zoom=1,offsetX=0,offsetY=0,clickMode=false,focused=null,liveMode=false;
+let backendUrl='';
+try{backendUrl=localStorage.getItem('3008-minimap-backend-url')||'';}catch(e){}
 let markers=loadMarkers();
 function loadMarkers(){try{const v=JSON.parse(localStorage.getItem('3008-minimap-markers'));return Array.isArray(v)?v:defaultMarkers.map(m=>({...m}));}catch(e){return defaultMarkers.map(m=>({...m}));}}
 function saveMarkers(){try{localStorage.setItem('3008-minimap-markers',JSON.stringify(markers));}catch(e){}}
@@ -108,20 +110,23 @@ $('map').addEventListener('click',e=>{if(!clickMode)return;const r=e.currentTarg
 $('resetBtn').addEventListener('click',()=>{if(!confirm('Reset zoom and restore default demo markers? Your custom markers will be removed.'))return;markers=defaultMarkers.map(m=>({...m}));zoom=1;offsetX=0;offsetY=0;focused=null;saveMarkers();renderMarkers();draw();toast('Map reset');});
 $('exportBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),markers},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='3008-minimap-markers.json';a.click();URL.revokeObjectURL(a.href);toast('Markers exported');});
 window.addEventListener('resize',draw);
+function apiBase(){return backendUrl.trim().replace(/\/$/,'');}
+function renderConnection(){ $('backendUrl').value=backendUrl; $('connectionTitle').textContent=liveMode?'Live server connected':(backendUrl?'Backend configured':'Demo mode'); $('connectionText').textContent=liveMode?'Receiving recent player positions from your backend.':(backendUrl?'Waiting for recent server reports. Check the URL and backend status.':'Add the HTTPS URL of your deployed backend to receive live positions.');}
+$('saveBackend').addEventListener('click',()=>{const value=$('backendUrl').value.trim().replace(/\/$/,'');if(value && !/^https?:\/\//i.test(value)){toast('Enter a valid http:// or https:// URL');return;}backendUrl=value;try{localStorage.setItem('3008-minimap-backend-url',backendUrl);}catch(e){}renderConnection();refreshLivePlayers();toast(backendUrl?'Backend URL saved':'Using local demo mode');});
 async function refreshLivePlayers(){
  try {
-  const response=await fetch('/api/players',{cache:'no-store'});
+  const response=await fetch((apiBase()||'')+'/api/players',{cache:'no-store'});
   if(!response.ok) throw new Error('API unavailable');
   const data=await response.json();
   if(data.connected && Array.isArray(data.players)){
    players=data.players.map((p,i)=>({...p,id:String(p.id||i),name:String(p.name||'Player'),x:clamp(Number(p.x)||0,0,100),y:clamp(Number(p.y)||0,0,100),color:p.color||'#8bc8ff',self:false}));
-   liveMode=true;$('liveLabel').textContent='LIVE · ROBLOX SERVER';$('playerCount').nextElementSibling.textContent='Live server positions';renderPlayers();draw();
+   liveMode=true;$('liveLabel').textContent='LIVE · ROBLOX SERVER';$('playerCount').nextElementSibling.textContent='Live server positions';renderPlayers();renderConnection();draw();
   } else if(liveMode) {
-   players=demoPlayers.map(p=>({...p}));liveMode=false;$('liveLabel').textContent='LOCAL DEMO MODE';$('playerCount').nextElementSibling.textContent='Demo positions';renderPlayers();draw();
+   players=demoPlayers.map(p=>({...p}));liveMode=false;$('liveLabel').textContent='LOCAL DEMO MODE';$('playerCount').nextElementSibling.textContent='Demo positions';renderPlayers();renderConnection();draw();
   }
  } catch(e) { /* GitHub Pages/static mode has no API; keep the demo working. */ }
 }
-renderPlayers();renderMarkers();draw();refreshLivePlayers();setInterval(refreshLivePlayers,5000);
+renderPlayers();renderMarkers();draw();renderConnection();refreshLivePlayers();setInterval(refreshLivePlayers,5000);
 })();
 </script>
 </body></html>
