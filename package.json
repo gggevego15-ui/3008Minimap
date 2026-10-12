@@ -1,0 +1,12 @@
+{
+  "name": "3008-minimap",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive Roblox 3008 minimap and optional live position relay",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
