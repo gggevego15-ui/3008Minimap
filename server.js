@@ -29,6 +29,9 @@ function readBody(req) {
 }
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
+  if (req.method === 'GET' && ['/api/health', '/api/players'].includes(url.pathname)) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   if (req.method === 'GET' && url.pathname === '/api/health') {
     return send(res, 200, { ok: true, connected: Boolean(lastUpdate && Date.now() - lastUpdate < 20_000), players: players.length });
   }
