@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const PORT = Number(process.env.PORT || 3000);
+const HOST = process.env.HOST || '0.0.0.0';
 const TOKEN = process.env.MINIMAP_TOKEN;
 const ROOT = __dirname;
 let players = [];
@@ -70,4 +71,5 @@ const server = http.createServer(async (req, res) => {
     res.end(req.method === 'HEAD' ? undefined : content);
   });
 });
-server.listen(PORT, () => console.log('3008 Minimap listening on port ' + PORT));
+server.listen(PORT, HOST, () => console.log('3008 Minimap listening on http://' + HOST + ':' + PORT));
+module.exports = server;
