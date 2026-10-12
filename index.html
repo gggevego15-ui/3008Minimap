@@ -124,7 +124,9 @@ async function refreshLivePlayers(){
   } else if(liveMode) {
    players=demoPlayers.map(p=>({...p}));liveMode=false;$('liveLabel').textContent='LOCAL DEMO MODE';$('playerCount').nextElementSibling.textContent='Demo positions';renderPlayers();renderConnection();draw();
   }
- } catch(e) { /* GitHub Pages/static mode has no API; keep the demo working. */ }
+ } catch(e) {
+  if(liveMode){players=demoPlayers.map(p=>({...p}));liveMode=false;$('liveLabel').textContent='LOCAL DEMO MODE';$('playerCount').nextElementSibling.textContent='Demo positions';renderPlayers();renderConnection();draw();}
+ }
 }
 renderPlayers();renderMarkers();draw();renderConnection();refreshLivePlayers();setInterval(refreshLivePlayers,5000);
 })();
